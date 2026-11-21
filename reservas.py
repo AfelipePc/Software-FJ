@@ -1,11 +1,4 @@
 
-# ==================================================
-# SOFTWARE FJ
-# Sistema Integral de Gestion de Clientes,
-# Servicios y Reservas
-# Archivo: reservas.py
-# ==================================================
-
 from excepciones import (
     ReservaInvalidaError,
     ServicioNoDisponibleError,
@@ -14,36 +7,45 @@ from excepciones import (
 
 
 class Reserva:
-    """
-    Clase encargada de gestionar las reservas
-    realizadas por los clientes de Software FJ.
-    """
 
     def __init__(self, cliente, servicio, duracion):
+        try:
+            if cliente is None:
+                raise ReservaInvalidaError(
+                    "Debe seleccionar un cliente valido."
+                )
 
-        if cliente is None:
-            raise ReservaInvalidaError("Debe seleccionar un cliente.")
+            if servicio is None:
+                raise ReservaInvalidaError(
+                    "Debe seleccionar un servicio valido."
+                )
 
-        if servicio is None:
-            raise ReservaInvalidaError("Debe seleccionar un servicio.")
+            if not isinstance(duracion, (int, float)) or isinstance(duracion, bool):
+                raise ReservaInvalidaError(
+                    "La duracion debe ser un valor numerico."
+                )
 
-        if not isinstance(duracion, (int, float)) or isinstance(duracion, bool) or duracion <= 0:
+            if duracion <= 0:
+                raise ReservaInvalidaError(
+                    "La duracion debe ser mayor que cero."
+                )
+
+            servicio.validar_parametros()
+            servicio.validar_disponibilidad(1)
+
+            self.__cliente = cliente
+            self.__servicio = servicio
+            self.__duracion = duracion
+            self.__estado = "Pendiente"
+            self.__costo = 0
+
+        except ReservaInvalidaError:
+            raise
+
+        except Exception as error:
             raise ReservaInvalidaError(
-                "La duracion debe ser un numero mayor que cero."
-            )
-
-        if not servicio.validar_parametros():
-            raise ReservaInvalidaError(
-                "Los parametros del servicio no son validos."
-            )
-
-        servicio.validar_disponibilidad(1)
-
-        self.__cliente = cliente
-        self.__servicio = servicio
-        self.__duracion = duracion
-        self.__estado = "Pendiente"
-        self.__costo = 0
+                "No fue posible crear la reserva."
+            ) from error
 
     @property
     def cliente(self):
@@ -66,44 +68,39 @@ class Reserva:
         return self.__costo
 
     def confirmar(self):
-        """
-        Confirma la reserva y actualiza
-        la disponibilidad del servicio.
-        """
-
-        if self.__estado != "Pendiente":
-            raise ReservaInvalidaError(
-                "Solo se pueden confirmar reservas pendientes."
-            )
-
         try:
-            self.__servicio.validar_disponibilidad(1)
+            if self.__estado != "Pendiente":
+                raise ReservaInvalidaError(
+                    "Solo se pueden confirmar reservas pendientes."
+                )
 
+            self.__servicio.validar_disponibilidad(1)
             self.__servicio.actualizar_disponibilidad(-1)
 
             self.__estado = "Confirmada"
 
+        except ReservaInvalidaError:
+            raise
+
         except Exception as error:
-            raise ReservaInvalidaError(
+            raise ServicioNoDisponibleError(
                 "No fue posible confirmar la reserva."
             ) from error
 
     def cancelar(self):
-        """
-        Cancela una reserva y devuelve la disponibilidad
-        cuando la reserva ya estaba confirmada.
-        """
-
-        if self.__estado in ("Cancelada", "Procesada"):
-            raise ReservaInvalidaError(
-                "La reserva no puede cancelarse en su estado actual."
-            )
-
         try:
+            if self.__estado in ("Cancelada", "Procesada"):
+                raise ReservaInvalidaError(
+                    "No se puede cancelar una reserva cancelada o procesada."
+                )
+
             if self.__estado == "Confirmada":
                 self.__servicio.actualizar_disponibilidad(1)
 
             self.__estado = "Cancelada"
+
+        except ReservaInvalidaError:
+            raise
 
         except Exception as error:
             raise ReservaInvalidaError(
@@ -111,16 +108,27 @@ class Reserva:
             ) from error
 
     def procesar(self, impuesto=19, descuento=0):
-        """
-        Procesa la reserva y calcula su costo final.
-        """
-
-        if self.__estado != "Confirmada":
-            raise ReservaInvalidaError(
-                "La reserva debe estar confirmada para procesarse."
-            )
-
         try:
+            if self.__estado != "Confirmada":
+                raise CalculoInvalidoError(
+                    "Solo se pueden procesar reservas confirmadas."
+                )
+
+            if not isinstance(impuesto, (int, float)) or isinstance(impuesto, bool):
+                raise CalculoInvalidoError(
+                    "El impuesto debe ser numerico."
+                )
+
+            if not isinstance(descuento, (int, float)) or isinstance(descuento, bool):
+                raise CalculoInvalidoError(
+                    "El descuento debe ser numerico."
+                )
+
+            if impuesto < 0 or descuento < 0 or descuento > 100:
+                raise CalculoInvalidoError(
+                    "El impuesto o descuento tiene un valor no permitido."
+                )
+
             self.__costo = self.__servicio.calcular_costo(
                 self.__duracion,
                 impuesto,
@@ -129,23 +137,27 @@ class Reserva:
 
             if self.__costo <= 0:
                 raise CalculoInvalidoError(
-                    "El costo calculado no es valido."
+                    "El costo calculado debe ser mayor que cero."
                 )
 
             self.__estado = "Procesada"
 
             return self.__costo
 
+        except CalculoInvalidoError:
+            raise
+
         except Exception as error:
             raise CalculoInvalidoError(
-                "Error durante el procesamiento de la reserva."
+                "Ocurrio un error al calcular el costo de la reserva."
             ) from error
 
     def __str__(self):
         return (
             f"Cliente: {self.__cliente.nombre} | "
             f"Servicio: {self.__servicio.nombre} | "
-            f"Duracion: {self.__duracion} horas | "
+            f"Duracion: {self.__duracion} | "
             f"Estado: {self.__estado} | "
-            f"Costo: ${self.__costo:,.0f}"
+            f"Costo: ${self.__costo:.2f}"
         )
+
