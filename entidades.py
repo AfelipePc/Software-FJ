@@ -1,25 +1,17 @@
 
-# ============================================
-# SOFTWARE FJ
-# Sistema Integral de Gestion de Clientes,
-# Servicios y Reservas
-# Archivo: entidades.py
-# ============================================
-
 from abc import ABC, abstractmethod
+from excepciones import DatosInvalidosError
 
 
 class Entidad(ABC):
-    """
-    Clase abstracta que representa las entidades
-    generales del sistema Software FJ.
-    """
 
     def __init__(self, identificador):
-        if not identificador:
-            raise ValueError("El identificador no puede estar vacio.")
+        if not isinstance(identificador, str) or len(identificador.strip()) < 2:
+            raise DatosInvalidosError(
+                "El identificador debe contener al menos dos caracteres."
+            )
 
-        self.__identificador = identificador
+        self.__identificador = identificador.strip()
 
     @property
     def identificador(self):
@@ -27,8 +19,4 @@ class Entidad(ABC):
 
     @abstractmethod
     def mostrar_informacion(self):
-        """
-        Metodo abstracto que debe ser implementado
-        por las clases derivadas.
-        """
         pass
