@@ -1,14 +1,12 @@
 
-# ==================================================
-# SOFTWARE FJ
-# Sistema Integral de Gestion de Clientes,
-# Servicios y Reservas
-# Archivo principal: main.py
-# ==================================================
-
 from clientes import Cliente
 from servicios import ReservaSala, AlquilerEquipo, Asesoria
 from reservas import Reserva
+from excepciones import (
+    DatosInvalidosError,
+    ReservaInvalidaError,
+    CalculoInvalidoError
+)
 from registro_logs import registrar_evento, registrar_error
 
 
@@ -18,218 +16,368 @@ class SistemaSoftwareFJ:
         self.clientes = []
         self.servicios = []
         self.reservas = []
-
-        registrar_evento("Sistema Software FJ iniciado.")
-
-    def mostrar_menu(self):
-        print("\n====================================")
-        print("       SISTEMA SOFTWARE FJ")
-        print("====================================")
-        print("1. Registrar cliente")
-        print("2. Mostrar clientes")
-        print("3. Crear servicios")
-        print("4. Mostrar servicios")
-        print("5. Crear reserva")
-        print("6. Mostrar reservas")
-        print("7. Confirmar reserva")
-        print("8. Cancelar reserva")
-        print("9. Ejecutar pruebas del sistema")
-        print("0. Salir")
-        print("====================================")
+        registrar_evento("Sistema Software FJ iniciado correctamente.")
 
     def registrar_cliente(self):
         try:
-            nombre = input("Nombre del cliente: ")
+            print("\n--- REGISTRO DE CLIENTE ---")
+            identificador = input("Identificacion: ")
+            nombre = input("Nombre completo: ")
             documento = input("Documento: ")
             correo = input("Correo electronico: ")
             telefono = input("Telefono: ")
 
-            cliente = Cliente(nombre, documento, correo, telefono)
+            cliente = Cliente(
+                identificador, nombre, documento, correo, telefono
+            )
+
             self.clientes.append(cliente)
 
-            registrar_evento("Cliente registrado correctamente.")
-            print("Cliente registrado exitosamente.")
-
-        except Exception as error:
+        except (DatosInvalidosError, ValueError) as error:
             registrar_error(f"Error al registrar cliente: {error}")
-            print(f"No fue posible registrar el cliente: {error}")
+            print("No se pudo registrar el cliente:", error)
+
+        else:
+            registrar_evento("Cliente registrado correctamente.")
+            print("Cliente registrado con exito.")
+
+        finally:
+            print("Operacion de registro finalizada.")
 
     def mostrar_clientes(self):
+        print("\n--- CLIENTES REGISTRADOS ---")
         if not self.clientes:
             print("No hay clientes registrados.")
-            return
+        else:
+            for cliente in self.clientes:
+                print(cliente)
 
-        for cliente in self.clientes:
-            print(cliente)
-
-    def crear_servicios(self):
-        print("\nTIPOS DE SERVICIOS")
-        print("1. Reserva de salas")
-        print("2. Alquiler de equipos")
-        print("3. Asesorias especializadas")
-
+    def crear_servicio(self):
         try:
-            opcion = input("Seleccione un servicio: ")
+            print("\n--- CREAR SERVICIO ---")
+            print("1. Reserva de sala")
+            print("2. Alquiler de equipos")
+            print("3. Asesoria especializada")
+
+            opcion = input("Seleccione el tipo de servicio: ")
+            nombre = input("Nombre del servicio: ")
+            precio = float(input("Precio base: "))
+            disponibilidad = int(input("Cantidad disponible: "))
 
             if opcion == "1":
+                capacidad = int(input("Capacidad de la sala: "))
                 servicio = ReservaSala(
-                    "Sala de reuniones",
-                    50000,
-                    10
+                    nombre, precio, disponibilidad, capacidad
                 )
 
             elif opcion == "2":
+                tipo = input("Tipo de equipo: ")
                 servicio = AlquilerEquipo(
-                    "Computador portatil",
-                    30000,
-                    5
+                    nombre, precio, disponibilidad, tipo
                 )
 
             elif opcion == "3":
+                especialidad = input("Especialidad: ")
                 servicio = Asesoria(
-                    "Asesoria de software",
-                    80000,
-                    2
+                    nombre, precio, disponibilidad, especialidad
                 )
 
             else:
-                raise ValueError("Tipo de servicio incorrecto.")
+                raise DatosInvalidosError("Tipo de servicio no valido.")
 
+            servicio.validar_parametros()
             self.servicios.append(servicio)
-            registrar_evento("Servicio creado correctamente.")
-            print("Servicio creado exitosamente.")
 
-        except Exception as error:
+        except (DatosInvalidosError, ValueError) as error:
             registrar_error(f"Error al crear servicio: {error}")
-            print(f"No fue posible crear el servicio: {error}")
+            print("No se pudo crear el servicio:", error)
+
+        else:
+            registrar_evento("Servicio creado correctamente.")
+            print("Servicio creado con exito.")
+
+        finally:
+            print("Operacion de servicio finalizada.")
 
     def mostrar_servicios(self):
+        print("\n--- SERVICIOS DISPONIBLES ---")
         if not self.servicios:
             print("No hay servicios registrados.")
-            return
-
-        for indice, servicio in enumerate(self.servicios, start=1):
-            print(f"{indice}. {servicio}")
+        else:
+            for indice, servicio in enumerate(self.servicios, start=1):
+                print(f"{indice}. {servicio}")
 
     def crear_reserva(self):
         try:
             if not self.clientes or not self.servicios:
-                print("Primero registre clientes y servicios.")
-                return
+                raise ReservaInvalidaError(
+                    "Primero debe registrar clientes y servicios."
+                )
 
             self.mostrar_clientes()
-
-            indice_cliente = int(input("Numero del cliente: ")) - 1
-
-            if indice_cliente < 0 or indice_cliente >= len(self.clientes):
-                raise ValueError("Cliente inexistente.")
+            posicion_cliente = int(input("Numero del cliente: ")) - 1
 
             self.mostrar_servicios()
+            posicion_servicio = int(input("Numero del servicio: ")) - 1
 
-            indice_servicio = int(input("Numero del servicio: ")) - 1
+            cliente = self.clientes[posicion_cliente]
+            servicio = self.servicios[posicion_servicio]
+            duracion = float(input("Duracion de la reserva: "))
 
-            if indice_servicio < 0 or indice_servicio >= len(self.servicios):
-                raise ValueError("Servicio inexistente.")
-
-            duracion = float(input("Duracion del servicio: "))
-
-            reserva = Reserva(
-                self.clientes[indice_cliente],
-                self.servicios[indice_servicio],
-                duracion
-            )
-
+            reserva = Reserva(cliente, servicio, duracion)
             self.reservas.append(reserva)
 
-            registrar_evento("Reserva creada correctamente.")
-            print("Reserva creada exitosamente.")
-
-        except Exception as error:
+        except (ValueError, IndexError, ReservaInvalidaError) as error:
             registrar_error(f"Error al crear reserva: {error}")
-            print(f"No fue posible crear la reserva: {error}")
+            print("No se pudo crear la reserva:", error)
+
+        else:
+            registrar_evento("Reserva creada correctamente.")
+            print("Reserva creada con exito.")
+
+        finally:
+            print("Operacion de reserva finalizada.")
 
     def mostrar_reservas(self):
+        print("\n--- RESERVAS REGISTRADAS ---")
         if not self.reservas:
             print("No hay reservas registradas.")
-            return
+        else:
+            for indice, reserva in enumerate(self.reservas, start=1):
+                print(f"{indice}. {reserva}")
 
-        for indice, reserva in enumerate(self.reservas, start=1):
-            print(f"{indice}. {reserva}")
-
-    def cambiar_estado_reserva(self, confirmar=True):
+    def confirmar_reserva(self):
         try:
             self.mostrar_reservas()
+            posicion = int(input("Numero de la reserva: ")) - 1
+            reserva = self.reservas[posicion]
+            reserva.confirmar()
 
-            if not self.reservas:
-                return
+        except (ValueError, IndexError, ReservaInvalidaError) as error:
+            registrar_error(f"Error al confirmar reserva: {error}")
+            print("No se pudo confirmar la reserva:", error)
 
-            numero = int(input("Numero de reserva: ")) - 1
+        else:
+            registrar_evento("Reserva confirmada correctamente.")
+            print("Reserva confirmada.")
 
-            if numero < 0 or numero >= len(self.reservas):
-                raise ValueError("Reserva inexistente.")
+        finally:
+            print("Operacion de confirmacion finalizada.")
 
-            reserva = self.reservas[numero]
+    def cancelar_reserva(self):
+        try:
+            self.mostrar_reservas()
+            posicion = int(input("Numero de la reserva: ")) - 1
+            reserva = self.reservas[posicion]
+            reserva.cancelar()
 
-            if confirmar:
-                reserva.confirmar()
-                print("Reserva confirmada.")
-            else:
-                reserva.cancelar()
-                print("Reserva cancelada.")
+        except (ValueError, IndexError, ReservaInvalidaError) as error:
+            registrar_error(f"Error al cancelar reserva: {error}")
+            print("No se pudo cancelar la reserva:", error)
 
-            registrar_evento("Estado de reserva actualizado.")
+        else:
+            registrar_evento("Reserva cancelada correctamente.")
+            print("Reserva cancelada.")
 
+        finally:
+            print("Operacion de cancelacion finalizada.")
+
+    def procesar_reserva(self):
+        try:
+            self.mostrar_reservas()
+            posicion = int(input("Numero de la reserva: ")) - 1
+            reserva = self.reservas[posicion]
+
+            impuesto = float(input("Porcentaje de impuesto (ej. 19): "))
+            descuento = float(input("Porcentaje de descuento (ej. 0): "))
+
+            costo = reserva.procesar(impuesto, descuento)
+
+        except (ValueError, IndexError, CalculoInvalidoError) as error:
+            registrar_error(f"Error al procesar reserva: {error}")
+            print("No se pudo procesar la reserva:", error)
+
+        else:
+            registrar_evento("Reserva procesada correctamente.")
+            print(f"Reserva procesada. Costo total: ${costo:.2f}")
+
+        finally:
+            print("Operacion de procesamiento finalizada.")
+
+    def pruebas_simuladas(self):
+        print("\n--- PRUEBAS SIMULADAS ---")
+        operaciones = 0
+
+        # Prueba 1: crear cliente valido
+        try:
+            cliente = Cliente(
+                "C100", "Carlos Perez", "12345678",
+                "carlos@gmail.com", "3001234567"
+            )
+            self.clientes.append(cliente)
+            print("Prueba 1: cliente valido registrado.")
         except Exception as error:
-            registrar_error(f"Error al modificar reserva: {error}")
-            print(f"No fue posible modificar la reserva: {error}")
+            registrar_error(f"Prueba 1: {error}")
+            print("Prueba 1 fallida:", error)
+        else:
+            operaciones += 1
+
+        # Prueba 2: crear cliente con datos invalidos
+        try:
+            Cliente("C101", "A", "123", "correo", "12")
+        except Exception as error:
+            print("Prueba 2: datos invalidos detectados.")
+            registrar_error(f"Prueba 2: {error}")
+        else:
+            operaciones += 1
+            print("Prueba 2: no se detecto el error esperado.")
+
+        # Prueba 3: crear una sala
+        try:
+            sala = ReservaSala("Sala principal", 50000, 3, 20)
+            self.servicios.append(sala)
+            print("Prueba 3: sala creada.")
+        except Exception as error:
+            registrar_error(f"Prueba 3: {error}")
+            print("Prueba 3 fallida:", error)
+        else:
+            operaciones += 1
+
+        # Prueba 4: crear alquiler de equipo
+        try:
+            equipo = AlquilerEquipo("Portatil", 30000, 5, "Computador")
+            self.servicios.append(equipo)
+            print("Prueba 4: equipo creado.")
+        except Exception as error:
+            registrar_error(f"Prueba 4: {error}")
+            print("Prueba 4 fallida:", error)
+        else:
+            operaciones += 1
+
+        # Prueba 5: crear asesoria
+        try:
+            asesoria = Asesoria("Asesoria Python", 80000, 4, "Programacion")
+            self.servicios.append(asesoria)
+            print("Prueba 5: asesoria creada.")
+        except Exception as error:
+            registrar_error(f"Prueba 5: {error}")
+            print("Prueba 5 fallida:", error)
+        else:
+            operaciones += 1
+
+        # Prueba 6: crear reserva valida
+        try:
+            reserva = Reserva(cliente, sala, 2)
+            self.reservas.append(reserva)
+            print("Prueba 6: reserva creada.")
+        except Exception as error:
+            registrar_error(f"Prueba 6: {error}")
+            print("Prueba 6 fallida:", error)
+        else:
+            operaciones += 1
+
+        # Prueba 7: confirmar reserva
+        try:
+            reserva.confirmar()
+            print("Prueba 7: reserva confirmada.")
+        except Exception as error:
+            registrar_error(f"Prueba 7: {error}")
+            print("Prueba 7 fallida:", error)
+        else:
+            operaciones += 1
+
+        # Prueba 8: procesar reserva
+        try:
+            costo = reserva.procesar(19, 0)
+            print(f"Prueba 8: reserva procesada. Total: ${costo:.2f}")
+        except Exception as error:
+            registrar_error(f"Prueba 8: {error}")
+            print("Prueba 8 fallida:", error)
+        else:
+            operaciones += 1
+
+        # Prueba 9: intentar confirmar nuevamente
+        try:
+            reserva.confirmar()
+        except Exception as error:
+            print("Prueba 9: operacion no permitida detectada.")
+            registrar_error(f"Prueba 9: {error}")
+        else:
+            operaciones += 1
+            print("Prueba 9: se esperaba un error.")
+
+        # Prueba 10: cancelar una reserva procesada
+        try:
+            reserva.cancelar()
+        except Exception as error:
+            print("Prueba 10: cancelacion no permitida detectada.")
+            registrar_error(f"Prueba 10: {error}")
+        else:
+            operaciones += 1
+            print("Prueba 10: se esperaba un error.")
+
+        print(f"\nPruebas completadas. Operaciones correctas: {operaciones}")
+        registrar_evento("Finalizaron las pruebas simuladas.")
 
     def ejecutar(self):
         while True:
+            print("\n========== SOFTWARE FJ ==========")
+            print("1. Registrar cliente")
+            print("2. Mostrar clientes")
+            print("3. Crear servicio")
+            print("4. Mostrar servicios")
+            print("5. Crear reserva")
+            print("6. Mostrar reservas")
+            print("7. Confirmar reserva")
+            print("8. Cancelar reserva")
+            print("9. Procesar reserva")
+            print("10. Ejecutar pruebas simuladas")
+            print("0. Salir")
+
             try:
-                self.mostrar_menu()
                 opcion = input("Seleccione una opcion: ")
 
                 if opcion == "1":
                     self.registrar_cliente()
-
                 elif opcion == "2":
                     self.mostrar_clientes()
-
                 elif opcion == "3":
-                    self.crear_servicios()
-
+                    self.crear_servicio()
                 elif opcion == "4":
                     self.mostrar_servicios()
-
                 elif opcion == "5":
                     self.crear_reserva()
-
                 elif opcion == "6":
                     self.mostrar_reservas()
-
                 elif opcion == "7":
-                    self.cambiar_estado_reserva(True)
-
+                    self.confirmar_reserva()
                 elif opcion == "8":
-                    self.cambiar_estado_reserva(False)
-
+                    self.cancelar_reserva()
                 elif opcion == "9":
-                    print("Las pruebas se implementaran en el modulo correspondiente.")
-
+                    self.procesar_reserva()
+                elif opcion == "10":
+                    self.pruebas_simuladas()
                 elif opcion == "0":
-                    registrar_evento("Sistema Software FJ finalizado.")
                     print("Gracias por utilizar Software FJ.")
+                    registrar_evento("Sistema Software FJ finalizado.")
                     break
-
                 else:
                     print("Opcion no valida. Intente nuevamente.")
 
+            except KeyboardInterrupt:
+                print("\nEjecucion interrumpida por el usuario.")
+                registrar_error("Ejecucion interrumpida por el usuario.")
+                break
+
             except Exception as error:
-                registrar_error(f"Error general del sistema: {error}")
-                print(f"Se presento un error controlado: {error}")
+                registrar_error(f"Error inesperado: {error}")
+                print("Se presento un error inesperado:", error)
 
 
 if __name__ == "__main__":
     sistema = SistemaSoftwareFJ()
     sistema.ejecutar()
+
+    input("\nPresione Enter para finalizar...")
+
 
